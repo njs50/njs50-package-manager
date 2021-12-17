@@ -5,26 +5,100 @@
 	<TimerPackage>
 		<Timer isActive="no" isFolder="no" isTempTimer="no" isOffsetTimer="no">
 			<name>check for updates</name>
-			<script>-- add some code here someday...</script>
+			<script>expandAlias('njs50pm status')</script>
 			<command></command>
 			<packageName></packageName>
 			<time>00:20:00.000</time>
+		</Timer>
+		<Timer isActive="no" isFolder="no" isTempTimer="no" isOffsetTimer="no">
+			<name>auto update packages</name>
+			<script>expandAlias('njs50pm update')</script>
+			<command></command>
+			<packageName></packageName>
+			<time>12:00:00.000</time>
 		</Timer>
 	</TimerPackage>
 	<AliasPackage>
 		<Alias isActive="yes" isFolder="no">
 			<name>njs50pm</name>
-			<script>cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; velcome\n')</script>
+			<script>cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; commands\n')
+
+cecho('&lt;white&gt;njs50pm help&lt;reset&gt;              - View the contents of this help file\n')
+
+cecho('&lt;white&gt;njs50pm list&lt;reset&gt;              - List packages available to install\n')
+
+cecho('&lt;white&gt;njs50pm install &lt;package&gt;&lt;reset&gt; - Show status of installed packages\n')
+
+cecho('&lt;white&gt;njs50pm update&lt;reset&gt;            - Update any installed packages if possible\n')
+
+cecho('&lt;white&gt;njs50pm update &lt;package&gt;&lt;reset&gt;  - Update a specific package if possible\n')
+
+cecho('&lt;white&gt;njs50pm status&lt;reset&gt;            - Show status of installed packages\n')
+
+cecho('\n')
+</script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^njs50pm$</regex>
+			<regex>^(njs50pm|njs50pm help)$</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>njs50pm list</name>
+			<script>-- cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; available packages...\n')
+njs50pm.list()</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^njs50pm list$</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>njs50pm install</name>
+			<script>local pkg = matches[2]
+cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; installing package : ' .. pkg .. '\n')
+
+njs50pm.install(pkg)
+</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^njs50pm install (.*)$</regex>
 		</Alias>
 		<Alias isActive="yes" isFolder="no">
 			<name>njs50pm update</name>
-			<script>cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; updating modules...\n')</script>
+			<script>cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; updating packages...\n')
+njs50pm.updateAll()</script>
 			<command></command>
 			<packageName></packageName>
 			<regex>^njs50pm update$</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>njs50pm update specific</name>
+			<script>local pkg = matches[2]
+cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; updating package : ' .. pkg .. '\n')
+
+njs50pm.upgradeIfAvailable(pkg)
+
+-- njs50pm.updateAll()</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^njs50pm update (.*)$</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>njs50pm update specific</name>
+			<script>local pkg = matches[2]
+cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; uninstalling package : ' .. pkg .. '\n')
+
+njs50pm.uninstall(pkg)
+
+-- njs50pm.updateAll()</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^njs50pm uninstall (.*)$</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>njs50pm status</name>
+			<script>cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; installed package status...\n')
+njs50pm.showStatus()</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^njs50pm status$</regex>
 		</Alias>
 	</AliasPackage>
 	<ActionPackage />
@@ -53,11 +127,21 @@
 
 njs50pm = njs50pm or {}
 
+      
+njs50pm.log = function(pkg, msg) 
+  cecho('\n&lt;green&gt;njs50pm: &lt;white&gt;' .. pkg .. ' package ' .. msg .. '!\n') 
+end
+
 njs50pm.isInstalled = function(package)
   return table.contains(getPackages(), package)
 end
 
+
+
 njs50pm.getStatus = function(callback)
+
+  -- make sure all installed packages have the correct metadata
+  njs50.checkPackageMetadata()
 
   local co
   local installed = {}
@@ -109,7 +193,7 @@ njs50pm.showStatus = function()
         end
       end
     else
-      cecho('\n&lt;green&gt;PT:&lt;white&gt; no packages installed\n\n')
+      cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; no packages installed\n\n')
     end
 
   end)
@@ -128,11 +212,11 @@ njs50pm.updateAll = function()
           cecho('&lt;green&gt;latest version\n')
         else
           cecho('&lt;orange&gt;updating\n')
-          njs50pm.upgradeIfAvailable(package.metadata)
+          njs50pm.upgradeIfAvailable(package.name)
         end
       end
     else
-      cecho('\n&lt;green&gt;PT:&lt;white&gt; no packages installed\n\n')
+      cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; no packages installed\n\n')
     end
 
   end)
@@ -143,14 +227,14 @@ end
 njs50pm.upgradeIfAvailable = function(mod)
   
   if not mod or mod == '' then
-    cecho('\n&lt;red&gt;PT:&lt;white&gt; module is a required option\n\n')
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
     return
   end
   
   options = njs50pm.getLocalMetadata(mod)
 
   if (options.module == '') then
-     cecho('\n&lt;red&gt;PT:&lt;white&gt; package not found (' .. mod .. ') \n\n')
+     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. mod .. ') \n\n')
     return 
   end
 
@@ -162,10 +246,10 @@ njs50pm.upgradeIfAvailable = function(mod)
     callback = function(bUpdateAvailable) 
       
       if (bUpdateAvailable) then
-        cecho('\n&lt;yellow&gt;PT:&lt;white&gt; ' .. options.module .. ' has an update available!\n')
+        cecho('\n&lt;yellow&gt;njs50pm:&lt;white&gt; ' .. options.module .. ' has an update available!\n')
         njs50pm.install(options)
       else
-        cecho('\n&lt;green&gt;PT:&lt;white&gt; ' .. options.module .. ' is up to date!\n')
+        cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; ' .. options.module .. ' is up to date!\n')
       end
           
     end
@@ -177,12 +261,12 @@ end
 njs50pm.isUpdateAvailable = function(options)
   
   if not options or type(options) ~= 'table' or not options.module then
-    cecho('\n&lt;red&gt;PT:&lt;white&gt; module is a required option\n\n')
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
     return
   end
   
   options.githubUser = options.githubUser or 'njs50'
-  options.branch = options.branch or 'master'
+  options.branch = options.branch or 'main'
   options.callback = options.callback or display
   
   local currentHash = getPackageInfo(options.module, 'njs50-hash')
@@ -198,20 +282,45 @@ njs50pm.isUpdateAvailable = function(options)
   
 end
 
+njs50pm.uninstall = function(package)
+  if (njs50pm.isInstalled(package)) then
+    setPackageInfo(package, "njs50-module", '')    
+    setPackageInfo(package, "njs50-hash", '')
+    setPackageInfo(package, "njs50-branch", '')
+    setPackageInfo(package, "njs50-githubUser", '')
+    setPackageInfo(package, "njs50-githubPath", '')
+    uninstallPackage(package)
+    njs50pm.log(package, 'uninstalled')
+  else
+    njs50pm.log(package, 'was not installed')
+  end
+end
+
 njs50pm.install = function (options)
   
+  if type(options) == 'string' then
+    
+    if (options ~= '' and njs50pm.packages[options]) then
+      options = njs50pm.packages[options]
+    else
+      cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; unknown package: ' .. options .. '\n\n')
+      return
+    end
+  end  
+  
+  
   if not options or type(options) ~= 'table' or not options.module then
-    cecho('\n&lt;red&gt;PT:&lt;white&gt; module is a required option\n\n')
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; a package is a required \n\n')
     return
   end
   
   if table.contains(getModules(), options.module) then
-    cecho('\n&lt;red&gt;PT:&lt;white&gt; this package is already installed as a module!\n\n')
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; this package is already installed as a module!\n\n')
     return  
   end
   
   options.githubUser = options.githubUser or 'njs50'
-  options.branch = options.branch or 'master'
+  options.branch = options.branch or 'main'
   options.callback = options.callback or function() end
   options.githubPath = options.githubPath or ''
   
@@ -227,10 +336,6 @@ njs50pm.install = function (options)
         '/' .. options.module .. '.xml'
       
       local installHandler
-      
-      local log = function(msg) 
-        cecho('\n&lt;green&gt;PT: &lt;white&gt;' .. options.module .. ' package ' .. msg .. '!\n') 
-      end
     
       installHandler = registerAnonymousEventHandler("sysInstallPackage", function(_, name)
         -- stop if what got installed isn't my thing
@@ -246,13 +351,13 @@ njs50pm.install = function (options)
         setPackageInfo(options.module, "njs50-githubUser", options.githubUser)
         setPackageInfo(options.module, "njs50-githubPath", options.githubPath)
         
-        log('installed')
+        njs50pm.log(options.module, 'installed')
         
       end)
       
       if (njs50pm.isInstalled(options.module)) then
         uninstallPackage(options.module)
-        log('uninstalled')
+        njs50pm.log(options.module, 'uninstalled')
       end
       
       installPackage(URL)
@@ -274,17 +379,17 @@ end
 -- options are:
 --   module (required) i.e tfecat
 --
---   branch (optional, defaults to master)
+--   branch (optional, defaults to main)
 --   
 njs50pm.getRemoteHash = function(options)
   
   if not options or type(options) ~= 'table' or not options.module then
-    cecho('\n&lt;red&gt;PT:&lt;white&gt; module is a required option\n\n')
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
     return
   end
   
   options.githubUser = options.githubUser or 'njs50'
-  options.branch = options.branch or 'master'
+  options.branch = options.branch or 'main'
   options.callback = options.callback or display
   
   local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. "/branches"
@@ -310,7 +415,7 @@ njs50pm.getRemoteHash = function(options)
         end 
       end 
       
-      cecho('\n&lt;orange&gt;PT:&lt;white&gt; module or branch not found\n\n')
+      cecho('\n&lt;orange&gt;njs50pm:&lt;white&gt; module or branch not found\n\n')
       
     end
     
@@ -321,7 +426,7 @@ njs50pm.getRemoteHash = function(options)
     if rurl == url then 
       selfDestruct()
       
-      cecho('\n&lt;red&gt;PT:&lt;white&gt; failed to retrieve versions from github\n\n')
+      cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; failed to retrieve versions from github\n\n')
       display(response) 
       
     end
@@ -330,6 +435,39 @@ njs50pm.getRemoteHash = function(options)
   -- Lastly, we make the request:
   getHTTP(url, header)
 
+end
+
+njs50.checkPackageMetadata = function()
+  
+  local installed = getPackages()
+  -- njs50pm.packages
+  
+  for idx, package in ipairs(installed) do
+    if (njs50pm.packages[package]) then
+
+      local pdata = njs50pm.packages[package]
+      local md = njs50pm.getLocalMetadata(package)
+      
+      if (md.module == '') then
+        njs50pm.log(package, 'updating metadata')
+        setPackageInfo(package, "njs50-module", package)    
+        setPackageInfo(package, "njs50-hash", 'forcing-an-update')
+        setPackageInfo(package, "njs50-branch", pdata.branch)
+        setPackageInfo(package, "njs50-githubUser", pdata.githubUser)
+        setPackageInfo(package, "njs50-githubPath", pdata.githubPath)      
+      end
+      
+      
+    end
+  end
+  
+  -- 
+ 
+  -- if md.module == '' then
+
+  -- end
+  
+  
 end</script>
 			<eventHandlerList />
 		</Script>
@@ -340,36 +478,61 @@ end</script>
 
 njs50pm.packages = njs50pm.packages or {}
   
-njs50pm.packages["TFEcat"] = { 
-  name = 'TFEcat',
+njs50pm.packages["tfecat"] = { 
+  name = 'tfecat',
   description = 'better than the tfecat website, and in game!',
   module = 'tfecat', 
+  branch = 'master',
   githubPath = '/mudlet/tfecat.module',
-}
- 
-njs50pm.packages["tfe-mapper"] = { 
-  name = 'njs50 mapper',
-  description = 'a mapper for tfe by njs50',
-  module = 'tfe-mapper', 
+  githubUser = 'njs50',
 }
 
 njs50pm.packages["tfe-mapper"] = { 
-  name = 'njs50 mapper',
+  name = 'tfe-mapper',
   description = 'a mapper for tfe by njs50',
   module = 'tfe-mapper', 
+  branch = 'master',
+  githubPath = '',
+  githubUser = 'njs50',
 }
 
 njs50pm.packages["njs50-tfe"] = { 
   name = 'njs50-tfe',
-  description = '',
+  description = 'a dump of my mudlet code, probably unusable',
   module = 'njs50-tfe', 
+  branch = 'main',
+  githubPath = '',
+  githubUser = 'njs50',
 }
 
 njs50pm.packages["njs50-package-manager"] = { 
   name = 'njs50-package-manager',
-  description = '',
+  description = 'this package manager!',
   module = 'njs50-package-manager', 
-}</script>
+  branch = 'main',
+  githubPath = '',
+  githubUser = 'njs50',
+}
+
+
+njs50pm.list = function()
+  
+  local st = demonnic.TableMaker:new({
+    edgeCharacter = '|'
+  })
+    
+  st:addColumn({name = "Package", width = 25, textColor = "&lt;green&gt;"})
+  st:addColumn({name = "Description", width = 55, textColor = "&lt;white&gt;", ["alignment"] = "left"})
+
+  for pname, pdata in pairs(njs50pm.packages) do
+  
+    st:addRow({pname, ' ' .. pdata.description})
+  end
+  
+  cecho(st:assemble())
+
+  
+end</script>
 			<eventHandlerList />
 		</Script>
 		<ScriptGroup isActive="yes" isFolder="yes">
