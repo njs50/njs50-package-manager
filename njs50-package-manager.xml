@@ -522,7 +522,7 @@ njs50pm.list = function()
   })
     
   st:addColumn({name = "Package", width = 25, textColor = "&lt;green&gt;"})
-  st:addColumn({name = "Description", width = 55, textColor = "&lt;white&gt;", ["alignment"] = "left"})
+  st:addColumn({name = "Description", width = 52, textColor = "&lt;white&gt;", ["alignment"] = "left"})
 
   for pname, pdata in pairs(njs50pm.packages) do
   
