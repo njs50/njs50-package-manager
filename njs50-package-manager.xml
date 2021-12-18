@@ -402,7 +402,9 @@ njs50pm.checkRateLimit = function()
       response = common.json.decode(response)
       
       if (response.rate.remaining == 0) then
-        cecho('\n&lt;green&gt;GITHUB:&lt;white&gt; rate limit resets in ' .. common.formatElapsedTime((response.rate.reset) - getEpoch()) .. '\n')
+        cecho('\n&lt;orange&gt;GITHUB:&lt;white&gt; API unlocks in ' .. common.formatElapsedTime((response.rate.reset) - getEpoch()) .. '\n')
+      else
+        cecho('\n&lt;green&gt;GITHUB:&lt;white&gt; ' .. tostring(response.rate.remaining) .. ' API requests remaining\n')
       end
       
     end
@@ -426,6 +428,35 @@ njs50pm.checkRateLimit = function()
 end
 
 
+njs50pm.hashCache = njs50pm.hashCache or {}
+
+njs50pm.clearCache = function(module)
+  if not module or module == '' then
+    njs50pm.hashCache = {}
+  else
+    njs50pm.hashCache[module] = nil
+  end
+end
+
+njs50pm.cacheTime = 20 * 60 -- 20 minutes
+
+njs50pm.cacheRequest = function(module, response)
+  njs50pm.hashCache[module] = {
+    data = response,
+    dt = getEpoch()
+  }
+end
+
+njs50pm.getCachedRequest = function(module)
+  local cr = njs50pm.hashCache[module]
+  if (cr and getEpoch() - cr.dt &lt; njs50pm.cacheTime) then
+    cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; loaded ' .. module .. ' hash from cache\n')
+    -- display(cr.data)
+    return cr.data
+  end
+  return nil
+end
+
 njs50pm.getRemoteHash = function(options)
   
   if not options or type(options) ~= 'table' or not options.module then
@@ -439,6 +470,19 @@ njs50pm.getRemoteHash = function(options)
   
   local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. "/branches"
   local header = {["Content-Type"] = "application/json"}
+  
+  
+  local cachedRequest = njs50pm.getCachedRequest(options.module)
+  
+  if (cachedRequest) then
+    -- because of coroutine this needs to happen outside this execution
+    tempTimer(0, function()
+      options.callback(cachedRequest)
+    end)
+    return 
+  end
+  
+  
   
   local responseHandler, errorHandler
   
@@ -456,6 +500,7 @@ njs50pm.getRemoteHash = function(options)
       
       for idx, branch in ipairs(response) do
         if (branch.name == options.branch) then
+          njs50pm.cacheRequest(options.module, branch.commit.sha)
           return options.callback(branch.commit.sha)
         end 
       end 
