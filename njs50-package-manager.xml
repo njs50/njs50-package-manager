@@ -187,9 +187,9 @@ njs50pm.showStatus = function()
       for idx, package in ipairs(installed) do
         cecho('&lt;white&gt;' .. package.name .. ' : ')
         if (package.remoteHash == package.metadata.hash) then
-          cecho('&lt;green&gt;latest version\n')
+          cecho('&lt;green&gt;latest version: &lt;white&gt;' .. package.metadata.hash .. '\n')
         else
-          cecho('&lt;orange&gt;update available\n')
+          cecho('&lt;orange&gt;update available: &lt;white&gt;' .. package.remoteHash .. ' from ' .. package.metadata.hash .. '\n')
         end
       end
     else
