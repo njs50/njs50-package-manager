@@ -381,6 +381,51 @@ end
 --
 --   branch (optional, defaults to main)
 --   
+
+njs50pm.checkRateLimit = function()
+
+-- 
+  local url = "https://api.github.com/rate_limit"
+  local header = {["Content-Type"] = "application/json"}
+  local responseHandler, errorHandler
+  
+  local selfDestruct = function()
+    killAnonymousEventHandler(responseHandler)
+    killAnonymousEventHandler(errorHandler)
+  end
+  
+  -- first we create something to handle the success, and tell us what we got
+  responseHandler = registerAnonymousEventHandler('sysGetHttpDone', function(event, rurl, response)
+    if rurl == url then 
+      selfDestruct()
+      
+      response = common.json.decode(response)
+      
+      if (response.rate.remaining == 0) then
+        cecho('\n&lt;green&gt;GITHUB:&lt;white&gt; rate limit resets in ' .. common.formatElapsedTime((response.rate.reset) - getEpoch()) .. '\n')
+      end
+      
+    end
+    
+  end, true) -- this sets it to delete itself after it fires
+  
+  -- then we create something to handle the error message, and tell us what went wrong
+  errorHandler = registerAnonymousEventHandler('sysGetHttpError', function(event, response, rurl)
+    if rurl == url then 
+      selfDestruct()
+      
+      cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; failed to retrieve rate limit data from github\n\n')
+      display(response) 
+      
+    end
+  end)
+  
+  -- Lastly, we make the request:
+  getHTTP(url, header)  
+  
+end
+
+
 njs50pm.getRemoteHash = function(options)
   
   if not options or type(options) ~= 'table' or not options.module then
@@ -428,6 +473,7 @@ njs50pm.getRemoteHash = function(options)
       
       cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; failed to retrieve versions from github\n\n')
       display(response) 
+      njs50pm.checkRateLimit()
       
     end
   end)
