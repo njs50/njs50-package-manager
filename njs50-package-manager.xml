@@ -73,6 +73,8 @@ njs50pm.updateAll()</script>
 			<script>local pkg = matches[2]
 cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; updating package : ' .. pkg .. '\n')
 
+-- clear the cache if we are trying to upgrade a specific package
+njs50pm.clearCache(pkg)
 njs50pm.upgradeIfAvailable(pkg)
 
 -- njs50pm.updateAll()</script>
@@ -81,7 +83,7 @@ njs50pm.upgradeIfAvailable(pkg)
 			<regex>^njs50pm update (.*)$</regex>
 		</Alias>
 		<Alias isActive="yes" isFolder="no">
-			<name>njs50pm update specific</name>
+			<name>njs50pm uninstall</name>
 			<script>local pkg = matches[2]
 cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; uninstalling package : ' .. pkg .. '\n')
 
