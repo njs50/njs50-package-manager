@@ -354,6 +354,7 @@ njs50pm.install = function (options)
         setPackageInfo(options.module, "njs50-githubPath", options.githubPath)
         
         njs50pm.log(options.module, 'installed')
+        raiseEvent('COMMON:njs50-module-updated-' .. options.module)
         
       end)
       
