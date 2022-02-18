@@ -143,7 +143,7 @@ end
 njs50pm.getStatus = function(callback)
 
   -- make sure all installed packages have the correct metadata
-  njs50.checkPackageMetadata()
+  njs50pm.checkPackageMetadata()
 
   local co
   local installed = {}
@@ -371,7 +371,7 @@ end
 
 njs50pm.getLocalMetadata = function(mod) 
   return {
-    module = getPackageInfo(mod, "njs50-module"),
+    ['module'] = getPackageInfo(mod, "njs50-module"),
     hash = getPackageInfo(mod, "njs50-hash"),
     branch = getPackageInfo(mod, "njs50-branch"),
     githubUser = getPackageInfo(mod, "njs50-githubUser"),
@@ -402,10 +402,11 @@ njs50pm.checkRateLimit = function()
     if rurl == url then 
       selfDestruct()
       
-      response = common.json.decode(response)
+      response = yajl.to_value(response)
       
       if (response.rate.remaining == 0) then
-        cecho('\n&lt;orange&gt;GITHUB:&lt;white&gt; API unlocks in ' .. common.formatElapsedTime((response.rate.reset) - getEpoch()) .. '\n')
+        -- cecho('\n&lt;orange&gt;GITHUB:&lt;white&gt; API unlocks in ' .. common.formatElapsedTime((response.rate.reset) - getEpoch()) .. '\n')
+        cecho('\n&lt;orange&gt;GITHUB:&lt;white&gt; API unlocks in ' .. tostring((response.rate.reset) - getEpoch()) .. 's\n')
       else
         cecho('\n&lt;green&gt;GITHUB:&lt;white&gt; ' .. tostring(response.rate.remaining) .. ' API requests remaining\n')
       end
@@ -499,7 +500,7 @@ njs50pm.getRemoteHash = function(options)
     if rurl == url then 
       selfDestruct()
       
-      response = common.json.decode(response)
+      response = yajl.to_value(response)
       
       for idx, branch in ipairs(response) do
         if (branch.name == options.branch) then
@@ -531,7 +532,7 @@ njs50pm.getRemoteHash = function(options)
 
 end
 
-njs50.checkPackageMetadata = function()
+njs50pm.checkPackageMetadata = function()
   
   local installed = getPackages()
   -- njs50pm.packages
