@@ -163,7 +163,8 @@ njs50pm.getPackageInfo = function(package, variable)
     end
   end
   
-  local value = njs50pm.packageInfo[package][variable]
+  local vp = njs50pm.packageInfo[package] or {}
+  local value = vp[variable]
   
   if not value then 
     value = "" 
