@@ -284,7 +284,7 @@ njs50pm.upgradeIfAvailable = function(mod)
     return
   end
   
-  options = njs50pm.getLocalMetadata(mod)
+  local options = njs50pm.getLocalMetadata(mod)
 
   if (options.module == '') then
      cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. mod .. ') \n\n')
