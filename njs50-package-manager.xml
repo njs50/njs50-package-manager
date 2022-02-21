@@ -207,7 +207,10 @@ njs50pm.getStatus = function(callback)
             metadata = package, 
             remoteHash = hash
           })
-          coroutine.resume(co)
+          local ok, errorMsg = coroutine.resume(co)
+          if not ok then
+            error("Error in co-routine njs50pm: " .. errorMsg)
+          end
         end
         
         njs50pm.getRemoteHash(package)
@@ -221,7 +224,10 @@ njs50pm.getStatus = function(callback)
   
   end)
 
-  coroutine.resume(co) 
+  local ok, errorMsg = coroutine.resume(co)
+  if not ok then
+    error("Error in co-routine njs50pm: " .. errorMsg)
+  end
 
 end
 
