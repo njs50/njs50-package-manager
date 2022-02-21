@@ -129,6 +129,50 @@ njs50pm.showStatus()</script>
 
 njs50pm = njs50pm or {}
 
+-- until the mudlet functions persist...
+njs50pm.setPackageInfo = function(package, variable, value)
+  
+  if not njs50pm.packageInfo then
+    njs50pm.packageInfo = {}
+    if io.exists(getMudletHomeDir().."/njs50PackageInfo.lua") then
+      table.load(getMudletHomeDir().."/njs50PackageInfo.lua", njs50pm.packageInfo)
+    end
+  end
+
+  -- -- set the packageInfo anyway?
+  -- setPackageInfo(package, variable, value)
+  
+  njs50pm.packageInfo[package] = njs50pm.packageInfo[package] or {}
+  
+  if (value == '') then
+    value = nil
+  end
+  
+  njs50pm.packageInfo[package][variable] = value
+  
+  table.save(getMudletHomeDir().."/njs50PackageInfo.lua", njs50pm.packageInfo)
+  
+end
+
+njs50pm.getPackageInfo = function(package, variable)
+
+  if not njs50pm.packageInfo then
+    njs50pm.packageInfo = {}
+    if io.exists(getMudletHomeDir().."/njs50PackageInfo.lua") then
+      table.load(getMudletHomeDir().."/njs50PackageInfo.lua", njs50pm.packageInfo)
+    end
+  end
+  
+  local value = njs50pm.packageInfo[package][variable]
+  
+  if not value then 
+    value = "" 
+  end
+  
+  return value
+  
+end
+
       
 njs50pm.log = function(pkg, msg) 
   cecho('\n&lt;green&gt;njs50pm: &lt;white&gt;' .. pkg .. ' package ' .. msg .. '!\n') 
@@ -271,7 +315,7 @@ njs50pm.isUpdateAvailable = function(options)
   options.branch = options.branch or 'main'
   options.callback = options.callback or display
   
-  local currentHash = getPackageInfo(options.module, 'njs50-hash')
+  local currentHash = njs50pm.getPackageInfo(options.module, 'njs50-hash')
   
   njs50pm.getRemoteHash({
     module = options.module,
@@ -286,11 +330,11 @@ end
 
 njs50pm.uninstall = function(package)
   if (njs50pm.isInstalled(package)) then
-    setPackageInfo(package, "njs50-module", '')    
-    setPackageInfo(package, "njs50-hash", '')
-    setPackageInfo(package, "njs50-branch", '')
-    setPackageInfo(package, "njs50-githubUser", '')
-    setPackageInfo(package, "njs50-githubPath", '')
+    njs50pm.setPackageInfo(package, "njs50-module", '')    
+    njs50pm.setPackageInfo(package, "njs50-hash", '')
+    njs50pm.setPackageInfo(package, "njs50-branch", '')
+    njs50pm.setPackageInfo(package, "njs50-githubUser", '')
+    njs50pm.setPackageInfo(package, "njs50-githubPath", '')
     uninstallPackage(package)
     njs50pm.log(package, 'uninstalled')
   else
@@ -347,11 +391,11 @@ njs50pm.install = function (options)
         
         killAnonymousEventHandler(installHandler)
             
-        setPackageInfo(options.module, "njs50-module", options.module)    
-        setPackageInfo(options.module, "njs50-hash", hash)
-        setPackageInfo(options.module, "njs50-branch", options.branch)
-        setPackageInfo(options.module, "njs50-githubUser", options.githubUser)
-        setPackageInfo(options.module, "njs50-githubPath", options.githubPath)
+        njs50pm.setPackageInfo(options.module, "njs50-module", options.module)    
+        njs50pm.setPackageInfo(options.module, "njs50-hash", hash)
+        njs50pm.setPackageInfo(options.module, "njs50-branch", options.branch)
+        njs50pm.setPackageInfo(options.module, "njs50-githubUser", options.githubUser)
+        njs50pm.setPackageInfo(options.module, "njs50-githubPath", options.githubPath)
         
         njs50pm.log(options.module, 'installed')
         raiseEvent('COMMON:njs50-module-updated-' .. options.module)
@@ -371,11 +415,11 @@ end
 
 njs50pm.getLocalMetadata = function(mod) 
   return {
-    ['module'] = getPackageInfo(mod, "njs50-module"),
-    hash = getPackageInfo(mod, "njs50-hash"),
-    branch = getPackageInfo(mod, "njs50-branch"),
-    githubUser = getPackageInfo(mod, "njs50-githubUser"),
-    githubPath = getPackageInfo(mod, "njs50-githubPath"),    
+    ['module'] = njs50pm.getPackageInfo(mod, "njs50-module"),
+    hash = njs50pm.getPackageInfo(mod, "njs50-hash"),
+    branch = njs50pm.getPackageInfo(mod, "njs50-branch"),
+    githubUser = njs50pm.getPackageInfo(mod, "njs50-githubUser"),
+    githubPath = njs50pm.getPackageInfo(mod, "njs50-githubPath"),    
   }
 end
 
@@ -545,11 +589,11 @@ njs50pm.checkPackageMetadata = function()
       
       if (md.module == '') then
         njs50pm.log(package, 'updating metadata')
-        setPackageInfo(package, "njs50-module", package)    
-        setPackageInfo(package, "njs50-hash", 'forcing-an-update')
-        setPackageInfo(package, "njs50-branch", pdata.branch)
-        setPackageInfo(package, "njs50-githubUser", pdata.githubUser)
-        setPackageInfo(package, "njs50-githubPath", pdata.githubPath)      
+        njs50pm.setPackageInfo(package, "njs50-module", package)    
+        njs50pm.setPackageInfo(package, "njs50-hash", 'forcing-an-update')
+        njs50pm.setPackageInfo(package, "njs50-branch", pdata.branch)
+        njs50pm.setPackageInfo(package, "njs50-githubUser", pdata.githubUser)
+        njs50pm.setPackageInfo(package, "njs50-githubPath", pdata.githubPath)      
       end
       
       
