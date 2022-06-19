@@ -258,18 +258,35 @@ njs50pm.updateAll = function()
 
   njs50pm.getStatus(function(installed)
     
-    if (#installed &gt; 0) then
-      for idx, package in ipairs(installed) do
-        cecho('&lt;white&gt;' .. package.name .. ' : ')
-        if (package.remoteHash == package.metadata.hash) then
-          cecho('&lt;green&gt;latest version\n')
+    local co
+  
+    co = coroutine.create(function()    
+    
+        if (#installed &gt; 0) then
+          for idx, package in ipairs(installed) do
+            cecho('&lt;white&gt;' .. package.name .. ' : ')
+            if (package.remoteHash == package.metadata.hash) then
+              cecho('&lt;green&gt;latest version\n')
+            else
+              cecho('&lt;orange&gt;updating\n')
+              njs50pm.upgradeIfAvailable(package.name, function()
+                local ok, errorMsg = coroutine.resume(co)
+                if not ok then
+                error("Error in upgrade co-routine njs50pm: " .. errorMsg)
+              end
+              end)
+              coroutine.yield()
+            end
+          end
         else
-          cecho('&lt;orange&gt;updating\n')
-          njs50pm.upgradeIfAvailable(package.name)
+          cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; no packages installed\n\n')
         end
-      end
-    else
-      cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; no packages installed\n\n')
+        
+    end) -- end coroutine
+
+    local ok, errorMsg = coroutine.resume(co)
+    if not ok then
+      error("Error in co-routine njs50pm: " .. errorMsg)
     end
 
   end)
@@ -277,7 +294,7 @@ njs50pm.updateAll = function()
 end
 
 
-njs50pm.upgradeIfAvailable = function(mod)
+njs50pm.upgradeIfAvailable = function(mod, cb)
   
   if not mod or mod == '' then
     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
@@ -290,7 +307,8 @@ njs50pm.upgradeIfAvailable = function(mod)
      cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. mod .. ') \n\n')
     return 
   end
-
+  
+  options.callback = cb
 
   njs50pm.isUpdateAvailable({
     module = options.module,
@@ -303,6 +321,7 @@ njs50pm.upgradeIfAvailable = function(mod)
         njs50pm.install(options)
       else
         cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; ' .. options.module .. ' is up to date!\n')
+        if (cb) then cb() end
       end
           
     end
@@ -406,6 +425,7 @@ njs50pm.install = function (options)
         
         njs50pm.log(options.module, 'installed')
         raiseEvent('COMMON:njs50-module-updated-' .. options.module)
+        options.callback()
         
       end)
       
@@ -614,6 +634,16 @@ njs50pm.checkPackageMetadata = function()
   -- end
   
   
+end
+
+
+
+njs50pm.setupTestUpdate = function()
+
+  njs50pm.setPackageInfo('tfecat', "njs50-hash", 'forcing-an-update')
+  njs50pm.setPackageInfo('tfe-mapper', "njs50-hash", 'forcing-an-update')
+  njs50pm.setPackageInfo('njs50-tfe', "njs50-hash", 'forcing-an-update')
+ 
 end</script>
 			<eventHandlerList />
 		</Script>
@@ -644,7 +674,7 @@ njs50pm.packages["tfe-mapper"] = {
 
 njs50pm.packages["njs50-tfe"] = { 
   name = 'njs50-tfe',
-  description = 'a dump of my mudlet code, probably unusable',
+  description = 'a dump of my personal code, probably unusable',
   module = 'njs50-tfe', 
   branch = 'main',
   githubPath = '',
