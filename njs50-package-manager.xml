@@ -484,7 +484,7 @@ njs50pm.checkRateLimit = function()
       
     end
     
-  end, true) -- this sets it to delete itself after it fires
+  end)
   
   -- then we create something to handle the error message, and tell us what went wrong
   errorHandler = registerAnonymousEventHandler('sysGetHttpError', function(event, response, rurl)
@@ -584,7 +584,7 @@ njs50pm.getRemoteHash = function(options)
       
     end
     
-  end, true) -- this sets it to delete itself after it fires
+  end)
   
   -- then we create something to handle the error message, and tell us what went wrong
   errorHandler = registerAnonymousEventHandler('sysGetHttpError', function(event, response, rurl)
