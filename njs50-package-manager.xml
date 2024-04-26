@@ -1758,6 +1758,24 @@ end
 				</Script>
 			</ScriptGroup>
 		</ScriptGroup>
+		<Script isActive="yes" isFolder="no">
+			<name>njs50pm.postInstallHandler</name>
+			<packageName></packageName>
+			<script>njs50pm.postInstallHandler = function(evt, name, file)
+
+  -- after installing the package manager see if there is a package we should install
+  if (name == "njs50-package-manager") then  
+    if (postPMInstall) then      
+      expandAlias('njs50pm install ' .. postPMInstall)
+      postPMInstall = nil    
+    end    
+  end
+
+end</script>
+			<eventHandlerList>
+				<string>sysInstallPackage</string>
+			</eventHandlerList>
+		</Script>
 	</ScriptPackage>
 	<KeyPackage />
 	<HelpPackage>
