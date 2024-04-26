@@ -10,18 +10,20 @@
 			<packageName></packageName>
 			<time>00:20:00.000</time>
 		</Timer>
-		<Timer isActive="no" isFolder="no" isTempTimer="no" isOffsetTimer="no">
+		<Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no">
 			<name>auto update packages</name>
-			<script>expandAlias('njs50pm update')</script>
+			<script>-- nb: even tho this runs every two hours, the check will only 
+--     happen once per day while mudlet remains open
+njs50pm.autoUpdateCheck()</script>
 			<command></command>
 			<packageName></packageName>
-			<time>12:00:00.000</time>
+			<time>02:00:00.000</time>
 		</Timer>
 	</TimerPackage>
 	<AliasPackage>
 		<Alias isActive="yes" isFolder="no">
 			<name>njs50pm</name>
-			<script>cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; commands\n')
+			<script>cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; package manager commands\n')
 
 cecho('&lt;white&gt;njs50pm help&lt;reset&gt;              - View the contents of this help file\n')
 
@@ -62,7 +64,7 @@ njs50pm.install(pkg)
 		</Alias>
 		<Alias isActive="yes" isFolder="no">
 			<name>njs50pm update</name>
-			<script>cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; updating packages...\n')
+			<script>cecho('\n\n&lt;green&gt;njs50pm:&lt;white&gt; checking for updates...\n')
 njs50pm.updateAll()</script>
 			<command></command>
 			<packageName></packageName>
@@ -1771,15 +1773,45 @@ end
 
   -- after installing the package manager see if there is a package we should install
   if (name == "njs50-package-manager") then  
+    
+    expandAlias('njs50pm help')
+    
     if (postPMInstall) then      
       expandAlias('njs50pm install ' .. postPMInstall)
       postPMInstall = nil    
     end    
+    
   end
 
 end</script>
 			<eventHandlerList>
 				<string>sysInstallPackage</string>
+			</eventHandlerList>
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>njs50pm.autoUpdateCheck</name>
+			<packageName></packageName>
+			<script>njs50pm.lastUpdateCheck = njs50pm.lastUpdateCheck or 0
+
+-- only check for updates once a day
+njs50pm.updateCheckInterval = 60 * 60 * 24
+
+njs50pm.autoUpdateCheck = function()
+
+  local lastCheck =  getEpoch() - njs50pm.lastUpdateCheck
+
+  if (lastCheck &gt; njs50pm.updateCheckInterval) then
+    -- cecho('last check happened ' .. common.formatElapsedTime(lastCheck) .. 's ago\n')
+    
+    
+    expandAlias('njs50pm update')
+    
+    njs50pm.lastUpdateCheck = getEpoch()
+  end
+
+end</script>
+			<eventHandlerList>
+				<string>sysConnectionEvent</string>
 			</eventHandlerList>
 		</Script>
 	</ScriptPackage>
