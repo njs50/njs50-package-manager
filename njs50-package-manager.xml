@@ -432,9 +432,15 @@ njs50pm.install = function (options)
       if (njs50pm.isInstalled(options.module)) then
         uninstallPackage(options.module)
         njs50pm.log(options.module, 'uninstalled')
-      end
       
-      installPackage(URL)
+        tempTimer(0.25, function()
+          installPackage(URL)
+        end)
+      
+      else  
+        installPackage(URL)
+      end      
+      
     end
   })
   
