@@ -530,7 +530,10 @@ njs50pm.cacheRequest = function(module, response)
   }
 end
 
-njs50pm.getCachedRequest = function(module)
+njs50pm.getCachedRequest = function(module, branch)
+  if branch and branch ~= '' then
+    module = module .. '-' .. branch
+  end
   local cr = njs50pm.hashCache[module]
   if (cr and getEpoch() - cr.dt &lt; njs50pm.cacheTime) then
     cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; loaded ' .. module .. ' hash from cache\n')
@@ -555,7 +558,7 @@ njs50pm.getRemoteHash = function(options)
   local header = {["Content-Type"] = "application/json"}
   
   
-  local cachedRequest = njs50pm.getCachedRequest(options.module)
+  local cachedRequest = njs50pm.getCachedRequest(options.module, options.branch)
   
   if (cachedRequest) then
     -- because of coroutine this needs to happen outside this execution
