@@ -560,10 +560,11 @@ njs50pm.getRemoteHash = function(options)
   options.callback = options.callback or display
   options.fileType = options.fileType or 'xml'  
   options.githubPath = options.githubPath or ''
+  options.filename = options.filename or (options.module .. '.' .. options.fileType)
   
   local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. 
               "/commits?per_page=1&amp;sha=" .. options.branch .. '&amp;path=' .. options.githubPath .. '/' .. 
-              options.module .. '.' .. options.fileType
+              options.filename
               
   local header = {["Content-Type"] = "application/json"}
   
