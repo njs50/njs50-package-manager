@@ -397,17 +397,20 @@ njs50pm.install = function (options)
   options.branch = options.branch or 'main'
   options.callback = options.callback or function() end
   options.githubPath = options.githubPath or ''
+  options.fileType = options.fileType or 'xml'
   
   njs50pm.getRemoteHash({
     module = options.module,
     githubUser = options.githubUser,
     branch = options.branch,
+    fileType = options.fileType,
+    githubPath = options.githubPath,
     callback = function(hash)
 
       -- njs50/tfecat/fb20eb10f6c0e0bf40354b62a0a3a752642075e6/mudlet/tfecat.module/tfecat.xml  
       local URL = 'https://raw.githubusercontent.com/' .. options.githubUser .. 
         '/' .. options.module .. '/' .. hash .. options.githubPath .. 
-        '/' .. options.module .. '.xml'
+        '/' .. options.module .. '.' .. options.fileType
       
       local installHandler
     
@@ -545,6 +548,8 @@ end
 
 njs50pm.getRemoteHash = function(options)
   
+  -- https://api.github.com/repos/njs50/njs50-package-manager/commits?path=/config.lua&amp;page=1&amp;per_page=1&amp;sha=main
+  
   if not options or type(options) ~= 'table' or not options.module then
     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
     return
@@ -553,8 +558,13 @@ njs50pm.getRemoteHash = function(options)
   options.githubUser = options.githubUser or 'njs50'
   options.branch = options.branch or 'main'
   options.callback = options.callback or display
+  options.fileType = options.fileType or 'xml'  
+  options.githubPath = options.githubPath or ''
   
-  local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. "/branches"
+  local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. 
+              "/commits?per_page=1&amp;sha=" .. options.branch .. '&amp;path=' .. options.githubPath .. '/' .. 
+              options.module .. '.' .. options.fileType
+              
   local header = {["Content-Type"] = "application/json"}
   
   
@@ -567,8 +577,6 @@ njs50pm.getRemoteHash = function(options)
     end)
     return 
   end
-  
-  
   
   local responseHandler, errorHandler
   
@@ -584,14 +592,15 @@ njs50pm.getRemoteHash = function(options)
       
       response = yajl.to_value(response)
       
-      for idx, branch in ipairs(response) do
-        if (branch.name == options.branch) then
-          njs50pm.cacheRequest(options.module, branch.commit.sha)
-          return options.callback(branch.commit.sha)
-        end 
-      end 
-      
-      cecho('\n&lt;orange&gt;njs50pm:&lt;white&gt; module or branch not found\n\n')
+      if response and response[1] and response[1].sha then
+        
+        njs50pm.cacheRequest(options.module, response[1].sha)
+        return options.callback(response[1].sha)        
+        
+      else
+        cecho('\n&lt;orange&gt;njs50pm:&lt;white&gt; module or branch not found\n\n')
+        display(rurl)
+      end
       
     end
     
@@ -613,6 +622,8 @@ njs50pm.getRemoteHash = function(options)
   getHTTP(url, header)
 
 end
+
+
 
 njs50pm.checkPackageMetadata = function()
   
