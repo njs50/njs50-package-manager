@@ -169,7 +169,11 @@ njs50pm.getPackageInfo = function(package, variable)
   local value = vp[variable]
   
   if not value then 
-    value = "" 
+    if variable == 'njs50-fileType' then
+      value = 'xml'
+    else
+      value = "" 
+    end
   end
   
   return value
@@ -207,7 +211,9 @@ njs50pm.getStatus = function(callback)
           table.insert(installed, { 
             name = mod, 
             metadata = package, 
-            remoteHash = hash
+            remoteHash = hash,
+            -- fileType = fileType,
+            -- githubPath = githubPath,
           })
           local ok, errorMsg = coroutine.resume(co)
           if not ok then
@@ -316,6 +322,9 @@ njs50pm.upgradeIfAvailable = function(mod, cb)
     module = options.module,
     githubUser = options.githubUser,
     branch = options.branch,
+    fileType = options.fileType,
+    githubPath = options.githubPath,
+    
     callback = function(bUpdateAvailable) 
       
       if (bUpdateAvailable) then
@@ -342,6 +351,8 @@ njs50pm.isUpdateAvailable = function(options)
   options.githubUser = options.githubUser or 'njs50'
   options.branch = options.branch or 'main'
   options.callback = options.callback or display
+  options.fileType = options.fileType or 'xml'
+  options.githubPath = options.githubPath or ''
   
   local currentHash = njs50pm.getPackageInfo(options.module, 'njs50-hash')
   
@@ -349,6 +360,8 @@ njs50pm.isUpdateAvailable = function(options)
     module = options.module,
     githubUser = options.githubUser,
     branch = options.branch,
+    fileType = options.fileType,
+    githubPath = options.githubPath,    
     callback = function(hash)
       options.callback(hash ~= currentHash)
     end,
@@ -427,6 +440,7 @@ njs50pm.install = function (options)
         njs50pm.setPackageInfo(options.module, "njs50-branch", options.branch)
         njs50pm.setPackageInfo(options.module, "njs50-githubUser", options.githubUser)
         njs50pm.setPackageInfo(options.module, "njs50-githubPath", options.githubPath)
+        njs50pm.setPackageInfo(options.module, "njs50-fileType", options.fileType)
         
         njs50pm.log(options.module, 'installed')
         raiseEvent('COMMON:njs50-module-updated-' .. options.module)
@@ -458,6 +472,7 @@ njs50pm.getLocalMetadata = function(mod)
     branch = njs50pm.getPackageInfo(mod, "njs50-branch"),
     githubUser = njs50pm.getPackageInfo(mod, "njs50-githubUser"),
     githubPath = njs50pm.getPackageInfo(mod, "njs50-githubPath"),    
+    fileType = njs50pm.getPackageInfo(mod, "njs50-fileType"),    
   }
 end
 
@@ -560,6 +575,7 @@ njs50pm.getRemoteHash = function(options)
   options.callback = options.callback or display
   options.fileType = options.fileType or 'xml'  
   options.githubPath = options.githubPath or ''
+  
   options.filename = options.filename or (options.module .. '.' .. options.fileType)
   
   local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. 
@@ -643,9 +659,9 @@ njs50pm.checkPackageMetadata = function()
         njs50pm.setPackageInfo(package, "njs50-hash", 'forcing-an-update')
         njs50pm.setPackageInfo(package, "njs50-branch", pdata.branch)
         njs50pm.setPackageInfo(package, "njs50-githubUser", pdata.githubUser)
-        njs50pm.setPackageInfo(package, "njs50-githubPath", pdata.githubPath)      
+        njs50pm.setPackageInfo(package, "njs50-githubPath", pdata.githubPath)     
+        njs50pm.setPackageInfo(package, "njs50-fileType", pdata.fileType)
       end
-      
       
     end
   end
