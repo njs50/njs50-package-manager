@@ -19,3 +19,12 @@ njs50pm update
 
 ## developer info
 feel free to fork this project and/or send pull requests
+
+### creating a new module
+
+copy empty-module.xml to modules/[new-module-name].xml
+
+import the new module in mudlet and set to sync.
+make changes / delete the placeholders etc.
+
+commit the changes to a new branch, send me a pull request...

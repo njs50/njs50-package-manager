@@ -169,11 +169,7 @@ njs50pm.getPackageInfo = function(package, variable)
   local value = vp[variable]
   
   if not value then 
-    if variable == 'njs50-fileType' then
-      value = 'xml'
-    else
-      value = "" 
-    end
+    value = "" 
   end
   
   return value
@@ -201,27 +197,24 @@ njs50pm.getStatus = function(callback)
 
   co = coroutine.create(function()
 
-    for idx, mod in ipairs(getPackages()) do
+    for package, packageData in pairs(njs50pm.packages) do
     
-      local package = njs50pm.getLocalMetadata(mod)
+      local localPackage = njs50pm.getLocalMetadata(package)
     
-      if package.hash ~= '' then
+      if localPackage.hash ~= '' then                
         
-        package.callback = function(hash)
+        njs50pm.getRemoteHash(package, function(hash)
           table.insert(installed, { 
-            name = mod, 
-            metadata = package, 
+            name = package, 
+            metadata = localPackage, 
             remoteHash = hash,
-            -- fileType = fileType,
-            -- githubPath = githubPath,
           })
           local ok, errorMsg = coroutine.resume(co)
           if not ok then
             error("Error in co-routine njs50pm: " .. errorMsg)
           end
-        end
+        end)
         
-        njs50pm.getRemoteHash(package)
         coroutine.yield()
                 
       end
@@ -302,80 +295,49 @@ njs50pm.updateAll = function()
 end
 
 
-njs50pm.upgradeIfAvailable = function(mod, cb)
+njs50pm.upgradeIfAvailable = function(package, cb)
   
-  if not mod or mod == '' then
-    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
+  if not package or package == '' then
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package is a required option\n\n')
     return
   end
   
-  local options = njs50pm.getLocalMetadata(mod)
+  local localPackage = njs50pm.getLocalMetadata(package)
 
-  if (options.module == '') then
-     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. mod .. ') \n\n')
+  if (localPackage.hash == '') then
+     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. package .. ') \n\n')
     return 
   end
-  
-  options.callback = cb
-
-  njs50pm.isUpdateAvailable({
-    module = options.module,
-    githubUser = options.githubUser,
-    branch = options.branch,
-    fileType = options.fileType,
-    githubPath = options.githubPath,
     
-    callback = function(bUpdateAvailable) 
-      
-      if (bUpdateAvailable) then
-        cecho('\n&lt;yellow&gt;njs50pm:&lt;white&gt; ' .. options.module .. ' has an update available!\n')
-        njs50pm.install(options)
-      else
-        cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; ' .. options.module .. ' is up to date!\n')
-        if (cb) then cb() end
-      end
-          
+
+  njs50pm.isUpdateAvailable(package, function(bUpdateAvailable) 
+    
+    if (bUpdateAvailable) then
+      cecho('\n&lt;yellow&gt;njs50pm:&lt;white&gt; ' .. package .. ' has an update available!\n')
+      njs50pm.install(package, cb)
+    else
+      cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; ' .. package .. ' is up to date!\n')
+      if (cb) then cb() end
     end
-  })
+        
+  end)
   
 end
 
 
-njs50pm.isUpdateAvailable = function(options)
+njs50pm.isUpdateAvailable = function(package, callback)
   
-  if not options or type(options) ~= 'table' or not options.module then
-    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
-    return
-  end
+  local currentHash = njs50pm.getPackageInfo(package, 'njs50-hash')
   
-  options.githubUser = options.githubUser or 'njs50'
-  options.branch = options.branch or 'main'
-  options.callback = options.callback or display
-  options.fileType = options.fileType or 'xml'
-  options.githubPath = options.githubPath or ''
-  
-  local currentHash = njs50pm.getPackageInfo(options.module, 'njs50-hash')
-  
-  njs50pm.getRemoteHash({
-    module = options.module,
-    githubUser = options.githubUser,
-    branch = options.branch,
-    fileType = options.fileType,
-    githubPath = options.githubPath,    
-    callback = function(hash)
-      options.callback(hash ~= currentHash)
-    end,
-  })  
+  njs50pm.getRemoteHash(package, function(hash)
+    callback(hash ~= currentHash)
+  end)  
   
 end
 
 njs50pm.uninstall = function(package)
-  if (njs50pm.isInstalled(package)) then
-    njs50pm.setPackageInfo(package, "njs50-module", '')    
+  if (njs50pm.isInstalled(package)) then    
     njs50pm.setPackageInfo(package, "njs50-hash", '')
-    njs50pm.setPackageInfo(package, "njs50-branch", '')
-    njs50pm.setPackageInfo(package, "njs50-githubUser", '')
-    njs50pm.setPackageInfo(package, "njs50-githubPath", '')
     uninstallPackage(package)
     njs50pm.log(package, 'uninstalled')
   else
@@ -383,74 +345,78 @@ njs50pm.uninstall = function(package)
   end
 end
 
-njs50pm.install = function (options)
-  
-  if type(options) == 'string' then
+njs50pm.install = function(package, callback)
     
-    if (options ~= '' and njs50pm.packages[options]) then
-      options = njs50pm.packages[options]
-    else
-      cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; unknown package: ' .. options .. '\n\n')
-      return
-    end
-  end  
-  
-  
-  if not options or type(options) ~= 'table' or not options.module then
-    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; a package is a required \n\n')
+  if (type(package) ~= 'string' or not njs50pm.packages[package]) then
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; unknown package: ' .. package .. '\n\n')
     return
   end
   
-  if table.contains(getModules(), options.module) then
+  if table.contains(getModules(), package) then
     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; this package is already installed as a module!\n\n')
     return  
   end
   
-  options.githubUser = options.githubUser or 'njs50'
-  options.branch = options.branch or 'main'
-  options.callback = options.callback or function() end
-  options.githubPath = options.githubPath or ''
-  options.fileType = options.fileType or 'xml'
-  
-  njs50pm.getRemoteHash({
-    module = options.module,
-    githubUser = options.githubUser,
-    branch = options.branch,
-    fileType = options.fileType,
-    githubPath = options.githubPath,
-    callback = function(hash)
 
-      -- njs50/tfecat/fb20eb10f6c0e0bf40354b62a0a3a752642075e6/mudlet/tfecat.module/tfecat.xml  
-      local URL = 'https://raw.githubusercontent.com/' .. options.githubUser .. 
-        '/' .. options.module .. '/' .. hash .. options.githubPath .. 
-        '/' .. options.module .. '.' .. options.fileType
+  local co  
+
+  local resume = function()
+    local ok, errorMsg = coroutine.resume(co)
+    if not ok then
+      error("Error in co-routine njs50pm.install: " .. errorMsg)
+    end  
+  end
+
+  co = coroutine.create(function()
+
+    local deps = njs50pm.packages[package].dependencies or {}
+    
+    for idx, dep in ipairs(deps) do
+      
+      if (njs50pm.isInstalled(dep)) then 
+        cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; updating dependency: ' .. dep .. '\n\n')
+        njs50pm.upgradeIfAvailable(dep, function()
+          resume()
+        end)
+      else
+        cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; installing dependency: ' .. dep .. '\n\n')
+        njs50pm.install(dep, function()
+          resume()
+        end)      
+      end
+      
+      coroutine.yield()      
+    
+    end
+
+
+    njs50pm.getRemoteHash(package, function(hash)
+  
+      local URL = njs50pm.getRemoteURL(package, 'download', hash)
       
       local installHandler
     
       installHandler = registerAnonymousEventHandler("sysInstallPackage", function(_, name)
         -- stop if what got installed isn't my thing
-        if name ~= options.module then 
+        if name ~= package then 
           return 
         end
         
         killAnonymousEventHandler(installHandler)
-            
-        njs50pm.setPackageInfo(options.module, "njs50-module", options.module)    
-        njs50pm.setPackageInfo(options.module, "njs50-hash", hash)
-        njs50pm.setPackageInfo(options.module, "njs50-branch", options.branch)
-        njs50pm.setPackageInfo(options.module, "njs50-githubUser", options.githubUser)
-        njs50pm.setPackageInfo(options.module, "njs50-githubPath", options.githubPath)
-        njs50pm.setPackageInfo(options.module, "njs50-fileType", options.fileType)
+                    
+        njs50pm.setPackageInfo(package, "njs50-hash", hash)
         
-        njs50pm.log(options.module, 'installed')
-        raiseEvent('COMMON:njs50-module-updated-' .. options.module)
-        options.callback()
+        njs50pm.log(package, 'installed')
+        raiseEvent('COMMON:njs50-module-updated-' .. package)
+        if (callback) then 
+          callback()      
+        end
         
       end)
       
-      if (njs50pm.isInstalled(options.module)) then
-        uninstallPackage(options.module)
-        njs50pm.log(options.module, 'uninstalled')
+      if (njs50pm.isInstalled(package)) then
+        uninstallPackage(package)
+        njs50pm.log(package, 'uninstalled')
       
         tempTimer(2, function()
           installPackage(URL)
@@ -459,20 +425,19 @@ njs50pm.install = function (options)
       else  
         installPackage(URL)
       end      
-      
-    end
-  })
+        
+    end)
+
+  
+  end)
+
+  resume()
   
 end
 
-njs50pm.getLocalMetadata = function(mod) 
+njs50pm.getLocalMetadata = function(package) 
   return {
-    ['module'] = njs50pm.getPackageInfo(mod, "njs50-module"),
-    hash = njs50pm.getPackageInfo(mod, "njs50-hash"),
-    branch = njs50pm.getPackageInfo(mod, "njs50-branch"),
-    githubUser = njs50pm.getPackageInfo(mod, "njs50-githubUser"),
-    githubPath = njs50pm.getPackageInfo(mod, "njs50-githubPath"),    
-    fileType = njs50pm.getPackageInfo(mod, "njs50-fileType"),    
+    hash = njs50pm.getPackageInfo(package, "njs50-hash"),
   }
 end
 
@@ -531,66 +496,89 @@ end
 
 njs50pm.hashCache = njs50pm.hashCache or {}
 
-njs50pm.clearCache = function(module)
-  if not module or module == '' then
+njs50pm.clearCache = function(package)
+  if not package or package == '' then
     njs50pm.hashCache = {}
   else
-    njs50pm.hashCache[module] = nil
+    njs50pm.hashCache[package] = nil
   end
 end
 
 njs50pm.cacheTime = 20 * 60 -- 20 minutes
 
-njs50pm.cacheRequest = function(module, response)
-  njs50pm.hashCache[module] = {
+njs50pm.cacheRequest = function(package, response)
+  njs50pm.hashCache[package] = {
     data = response,
     dt = getEpoch()
   }
 end
 
-njs50pm.getCachedRequest = function(module, branch)
-  if branch and branch ~= '' then
-    module = module .. '-' .. branch
-  end
-  local cr = njs50pm.hashCache[module]
+njs50pm.getCachedRequest = function(package)
+  local cr = njs50pm.hashCache[package]
   if (cr and getEpoch() - cr.dt &lt; njs50pm.cacheTime) then
-    cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; loaded ' .. module .. ' hash from cache\n')
+    cecho('\n&lt;green&gt;njs50pm:&lt;white&gt; loaded ' .. package .. ' remote version hash from cache\n')
     -- display(cr.data)
     return cr.data
   end
   return nil
 end
 
-njs50pm.getRemoteHash = function(options)
+njs50pm.getRemoteURL = function(package, urlType, hash)
+
+  local options
+  
+  -- allow options to be set instead of loading from registry
+  -- this is for non package manager use by tfe catalog
+  
+  if (type(package) == 'table') then
+    options = package
+  else
+    options = njs50pm.packages[package]
+  end
+
+ -- set some defaults when optional params aren't provided
+  options.githubUser = options.githubUser or 'njs50'
+  options.branch = options.branch or 'main'  
+  options.githubPath = options.githubPath or ''
+  options.githubProject = options.githubProject or options.module
+  
+  options.fileType = options.fileType or 'xml'  
+  options.filename = options.filename or (options.module .. '.' .. options.fileType)
+  
+  if urlType == 'hash' then
+    
+    return "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.githubProject .. 
+           "/commits?per_page=1&amp;sha=" .. options.branch .. '&amp;path=' .. options.githubPath .. '/' .. 
+           options.filename              
+  else
+  
+    
+  
+    return 'https://raw.githubusercontent.com/' .. options.githubUser .. 
+      '/' .. options.githubProject .. '/' .. hash .. options.githubPath .. 
+      '/' .. options.filename
+  
+  end
+
+end
+
+njs50pm.getRemoteHash = function(package, callback)
   
   -- https://api.github.com/repos/njs50/njs50-package-manager/commits?path=/config.lua&amp;page=1&amp;per_page=1&amp;sha=main
   
-  if not options or type(options) ~= 'table' or not options.module then
-    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; module is a required option\n\n')
-    return
-  end
-  
-  options.githubUser = options.githubUser or 'njs50'
-  options.branch = options.branch or 'main'
-  options.callback = options.callback or display
-  options.fileType = options.fileType or 'xml'  
-  options.githubPath = options.githubPath or ''
-  
-  options.filename = options.filename or (options.module .. '.' .. options.fileType)
-  
-  local url = "https://api.github.com/repos/" .. options.githubUser .. "/" .. options.module .. 
-              "/commits?per_page=1&amp;sha=" .. options.branch .. '&amp;path=' .. options.githubPath .. '/' .. 
-              options.filename
+  callback = callback or display
+      
+  local url = njs50pm.getRemoteURL(package, 'hash')
               
   local header = {["Content-Type"] = "application/json"}
   
   
-  local cachedRequest = njs50pm.getCachedRequest(options.module, options.branch)
+  local cachedRequest = njs50pm.getCachedRequest(package)
   
   if (cachedRequest) then
     -- because of coroutine this needs to happen outside this execution
-    tempTimer(0, function()
-      options.callback(cachedRequest)
+    tempTimer(0, function()      
+      callback(cachedRequest)
     end)
     return 
   end
@@ -611,8 +599,8 @@ njs50pm.getRemoteHash = function(options)
       
       if response and response[1] and response[1].sha then
         
-        njs50pm.cacheRequest(options.module, response[1].sha)
-        return options.callback(response[1].sha)        
+        njs50pm.cacheRequest(package, response[1].sha)
+        return callback(response[1].sha)        
         
       else
         cecho('\n&lt;orange&gt;njs50pm:&lt;white&gt; module or branch not found\n\n')
@@ -653,24 +641,13 @@ njs50pm.checkPackageMetadata = function()
       local pdata = njs50pm.packages[package]
       local md = njs50pm.getLocalMetadata(package)
       
-      if (md.module == '') then
+      if (md.hash == '') then
         njs50pm.log(package, 'updating metadata')
-        njs50pm.setPackageInfo(package, "njs50-module", package)    
         njs50pm.setPackageInfo(package, "njs50-hash", 'forcing-an-update')
-        njs50pm.setPackageInfo(package, "njs50-branch", pdata.branch)
-        njs50pm.setPackageInfo(package, "njs50-githubUser", pdata.githubUser)
-        njs50pm.setPackageInfo(package, "njs50-githubPath", pdata.githubPath)     
-        njs50pm.setPackageInfo(package, "njs50-fileType", pdata.fileType)
       end
       
     end
   end
-  
-  -- 
- 
-  -- if md.module == '' then
-
-  -- end
   
   
 end
@@ -718,16 +695,36 @@ njs50pm.packages["njs50-tfe"] = {
   branch = 'main',
   githubPath = '',
   githubUser = 'njs50',
+  dependencies = { 'njs50-common' }
 }
 
 njs50pm.packages["njs50-package-manager"] = { 
-  name = 'njs50-package-manager',
+  name = 'njs50-package-manager',  
   description = 'this package manager!',
   module = 'njs50-package-manager', 
   branch = 'main',
   githubPath = '',
   githubUser = 'njs50',
 }
+
+
+njs50pm.packages["njs50-common"] = { 
+  
+  module = 'njs50-common', 
+  
+  name = 'njs50-common',    
+  description = 'njs50 shared code',  
+  
+  githubProject = 'njs50-package-manager',  
+  githubUser = 'njs50',
+  githubPath = '/modules',
+    
+  branch = 'main',
+  fileType = 'xml',
+  
+}
+
+
 
 
 njs50pm.list = function()
