@@ -208,6 +208,7 @@ njs50pm.getStatus = function(callback)
             name = package, 
             metadata = localPackage, 
             remoteHash = hash,
+            dependencies = packageData.dependencies
           })
           local ok, errorMsg = coroutine.resume(co)
           if not ok then
@@ -261,20 +262,35 @@ njs50pm.updateAll = function()
     
     local co
   
+    local resume = function()
+      local ok, errorMsg = coroutine.resume(co)
+      if not ok then
+        error("Error in upgrade co-routine njs50pm: " .. errorMsg)
+      end    
+    end
+  
     co = coroutine.create(function()    
     
         if (#installed &gt; 0) then
-          for idx, package in ipairs(installed) do
-            cecho('&lt;white&gt;' .. package.name .. ' : ')
-            if (package.remoteHash == package.metadata.hash) then
+          for idx, packageData in ipairs(installed) do
+          
+            -- check dependencies are installed...
+            local deps = packageData.dependencies or {}            
+            for idx, dep in ipairs(deps) do              
+              if (not njs50pm.isInstalled(dep)) then 
+                cecho('\n&lt;red&gt;njs50pm:&lt;white&gt;  packages missing dependency - ' .. dep .. '\n\n')
+                njs50pm.install(dep, resume)                
+                coroutine.yield()
+              end
+            end          
+          
+            cecho('&lt;white&gt;' .. packageData.name .. ' : ')
+            if (packageData.remoteHash == packageData.metadata.hash) then
               cecho('&lt;green&gt;latest version\n')
             else
               cecho('&lt;orange&gt;updating\n')
-              njs50pm.upgradeIfAvailable(package.name, function()
-                local ok, errorMsg = coroutine.resume(co)
-                if not ok then
-                error("Error in upgrade co-routine njs50pm: " .. errorMsg)
-              end
+              njs50pm.upgradeIfAvailable(packageData.name, function()
+                resume()
               end)
               coroutine.yield()
             end
@@ -285,10 +301,7 @@ njs50pm.updateAll = function()
         
     end) -- end coroutine
 
-    local ok, errorMsg = coroutine.resume(co)
-    if not ok then
-      error("Error in co-routine njs50pm: " .. errorMsg)
-    end
+    resume()
 
   end)
 
@@ -305,7 +318,8 @@ njs50pm.upgradeIfAvailable = function(package, cb)
   local localPackage = njs50pm.getLocalMetadata(package)
 
   if (localPackage.hash == '') then
-     cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. package .. ') \n\n')
+    cecho('\n&lt;red&gt;njs50pm:&lt;white&gt; package not found (' .. package .. '), installing \n\n')
+    njs50pm.install(package, cb)        
     return 
   end
     
