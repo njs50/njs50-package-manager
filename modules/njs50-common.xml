@@ -68,9 +68,9 @@ njs50.onEmptyQueue = function(cb)
   local dt, dq
   
   -- prob need to handle everything beind dequeued in here
-  -- You abort casting chalcid salvo.
-  -- [ De-queued: 6 commands ]
   
+  -- You abort casting chalcid salvo.  
+  -- [ De-queued: 6 commands ] 
   -- !! Truncating input !!
   
   local cleanup = function()
@@ -78,18 +78,18 @@ njs50.onEmptyQueue = function(cb)
     killTrigger(dq)    
   end
   
-  dq = tempRegexTrigger([[^(You abort|\[ De-queued:|!! Truncating input) .*$]], function()
+  dq = tempRegexTrigger([[^(You abort|\[ De-queued:|!! Truncating input).*$]], function()
     send('gtell Danger: ' .. matches[1] .. ', commands may have been skipped')
     cleanup()
     cb()
   end)
   
-  dt = tempBeginOfLineTrigger('You are not trained in the art of dissection.', function()  
+  dt = tempBeginOfLineTrigger('To what do you want to set your title?', function()  
     cleanup()
     cb()  
   end)
   
-  send('|dissect')
+  send('|title')
 end</script>
 			<eventHandlerList />
 		</Script>
